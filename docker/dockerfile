@@ -264,3 +264,5 @@ RUN pip3 install --break-system-packages --force-reinstall blinker && \
 
 RUN apt-get update --fix-missing && \
     apt install -y rsync lbzip2 pigz zip p7zip-full p7zip-rar
+
+WORKDIR /home/ngoncharov/cvpr2026/BundleSDF
