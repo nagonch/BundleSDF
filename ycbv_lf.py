@@ -2,6 +2,7 @@ import torch
 import os
 import json
 import numpy as np
+from PIL import Image
 
 sequence_names = [
     "bleach_hard_00_03_chaitanya",
@@ -55,6 +56,7 @@ class YCBV_LF:
             self.metadata = json.load(f)
             self.n_views = self.metadata["n_views"]
             self.baseline = self.metadata["x_spacing"]
+        self.n_cameras = self.n_views[0] * self.n_views[1]
         self.camera_poses = (
             torch.stack(
                 [torch.tensor(np.loadtxt(path)) for path in self.camera_poses_paths]
@@ -63,17 +65,63 @@ class YCBV_LF:
             .float()
             .reshape(*self.n_views, 4, 4)
         )
+        self.camera_matrix = (
+            torch.tensor(
+                np.loadtxt(os.path.join(self.sequence_path, "camera_matrix.txt"))
+            )
+            .cuda()
+            .float()
+        )
+
+        self.depth_dir = os.path.join(self.sequence_path, "depth")
+        self.depth_paths = [
+            os.path.join(self.depth_dir, item)
+            for item in list(sorted(os.listdir(self.depth_dir)))
+        ]
+        self.object_poses_dir = os.path.join(self.sequence_path, "object_poses")
+        self.object_poses_paths = [
+            os.path.join(self.object_poses_dir, item)
+            for item in list(sorted(os.listdir(self.object_poses_dir)))
+        ]
+        self.lf_paths = [
+            os.path.join(self.sequence_path, item)
+            for item in list(sorted(os.listdir(os.path.join(self.sequence_path))))
+            if "LF_" in item
+        ]
 
     def __len__(self):
-        # Placeholder: return the number of items in the dataset
-        return 1000
+        return len(self.lf_paths)
 
     def __getitem__(self, idx):
-        pass
+        lf_path = self.lf_paths[idx]
+        depth_path = self.depth_paths[idx]
+        object_pose_path = self.object_poses_paths[idx]
+        frame_id = int(lf_path[-4:])
+        rgb_image = torch.tensor(
+            np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
+        ).cuda()
+        object_mask = torch.tensor(
+            np.array(Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png"))
+        ).cuda()
+        depth_image = (
+            torch.tensor(np.array(Image.open(depth_path))).cuda().float() / 1000.0
+        )
+        object_pose = torch.tensor(np.loadtxt(object_pose_path)).cuda().float()
+        return {
+            "rgb_image": rgb_image,
+            "object_mask": object_mask,
+            "depth_image": depth_image,
+            "object_pose": object_pose,
+            "camera_poses": self.camera_poses,
+            "camera_matrix": self.camera_matrix,
+            "baseline": self.baseline,
+            "frame_id": frame_id,
+            "lf_path": lf_path,
+        }
 
 
 if __name__ == "__main__":
     DATASET_PATH = "/home/ngoncharov/cvpr2026/ycbv-eoat-lf/dataset"
     SEQUENCE_NAME = "bleach_hard_00_03_chaitanya"
     dataset = YCBV_LF(DATASET_PATH, SEQUENCE_NAME)
-    print(dataset.camera_poses.shape)
+    print(dataset[1])
