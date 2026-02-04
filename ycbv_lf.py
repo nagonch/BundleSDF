@@ -97,12 +97,19 @@ class YCBV_LF:
         depth_path = self.depth_paths[idx]
         object_pose_path = self.object_poses_paths[idx]
         frame_id = int(lf_path[-4:])
-        rgb_image = torch.tensor(
-            np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
-        ).cuda()
-        object_mask = torch.tensor(
-            np.array(Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png"))
-        ).cuda()
+        rgb_image = (
+            torch.tensor(
+                np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
+            ).cuda()
+            / 255.0
+        )
+        object_mask = (
+            torch.tensor(
+                np.array(Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png"))
+            )
+            .cuda()
+            .bool()
+        )
         depth_image = (
             torch.tensor(np.array(Image.open(depth_path))).cuda().float() / 1000.0
         )
@@ -112,11 +119,7 @@ class YCBV_LF:
             "object_mask": object_mask,
             "depth_image": depth_image,
             "object_pose": object_pose,
-            "camera_poses": self.camera_poses,
-            "camera_matrix": self.camera_matrix,
-            "baseline": self.baseline,
             "frame_id": frame_id,
-            "lf_path": lf_path,
         }
 
 
