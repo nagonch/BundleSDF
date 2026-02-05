@@ -37,14 +37,14 @@ class YCBV_LF:
         ), f"Dataset path {dataset_path} does not exist."
         assert os.path.exists(
             os.path.join(dataset_path, sequence_name)
-        ), f"Sequence {sequence_name} does not exist in dataset path {dataset_path}."
+        ), f"Sequence {sequence_name} does not exist in dataset path {dataset_path}"
         self.dataset_path = dataset_path
         self.sequence_name = sequence_name
         self.sequence_path = os.path.join(dataset_path, sequence_name)
         self.model_name = sequence_to_model[sequence_name]
         assert os.path.exists(
             os.path.join(dataset_path, "models", self.model_name)
-        ), f"Model {self.model_name} does not exist in dataset path {dataset_path}."
+        ), f"Model {self.model_name} does not exist in dataset path {dataset_path}"
 
         self.camera_poses_paths = [
             os.path.join(self.sequence_path, "camera_poses", item)
@@ -65,6 +65,7 @@ class YCBV_LF:
             .float()
             .reshape(*self.n_views, 4, 4)
         )
+        self.camera_poses = self.camera_poses.reshape(-1, 4, 4)[self.n_cameras // 2]
         self.camera_matrix = (
             torch.tensor(
                 np.loadtxt(os.path.join(self.sequence_path, "camera_matrix.txt"))
@@ -97,12 +98,9 @@ class YCBV_LF:
         depth_path = self.depth_paths[idx]
         object_pose_path = self.object_poses_paths[idx]
         frame_id = int(lf_path[-4:])
-        rgb_image = (
-            torch.tensor(
-                np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
-            ).cuda()
-            / 255.0
-        )
+        rgb_image = torch.tensor(
+            np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
+        ).cuda()
         object_mask = (
             torch.tensor(
                 np.array(Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png"))
