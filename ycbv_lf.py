@@ -150,4 +150,29 @@ if __name__ == "__main__":
     DATASET_PATH = "/home/ngoncharov/cvpr2026/ycbv-eoat-lf/dataset"
     SEQUENCE_NAME = "bleach_hard_00_03_chaitanya"
     dataset = YCBV_LF(DATASET_PATH, SEQUENCE_NAME)
-    reader = LFReader(dataset)
+    from utilities import *
+
+    visualizer = Visualizer()
+    for i, frame in enumerate(dataset):
+        camera_matrix = dataset.camera_matrix
+        baseline = dataset.baseline
+        depth = frame["depth_image"] / 1000.0
+        points = (
+            backproject_depth_to_pointcloud(
+                None, torch.tensor(depth).cuda(), torch.tensor(camera_matrix).cuda()
+            )
+            .cpu()
+            .numpy()
+        )
+        colors = frame["rgb_image"].reshape(-1, 3)
+        if "masks" in frame and frame.get("masks", None) is not None:
+            mask = frame["object_mask"].reshape(-1)
+            points = points.reshape(-1, 3)[mask.reshape(-1) > 0]
+            colors = colors.reshape(-1, 3)[mask.reshape(-1) > 0]
+
+        object_to_base_pose = frame["object_pose"]
+        visualizer.add_point_cloud(
+            f"points_{i}", points, colors=colors, point_size=1e-3
+        )
+        visualizer.add_frame(name=f"obj_{i}", frame_T=object_to_base_pose)
+    visualizer.run()
