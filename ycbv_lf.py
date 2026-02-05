@@ -123,8 +123,35 @@ class YCBV_LF:
         }
 
 
+class LFReader:
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.K = torch.clone(self.dataset.camera_matrix)
+        self.id_strs = [str(i).zfill(4) for i in range(len(dataset))]
+        self.colors = []
+        self.depths = []
+        self.masks = []
+        for i in range(len(dataset)):
+            frame = self.dataset[i]
+            self.colors.append(frame["rgb_image"])
+            self.depths.append(frame["depth_image"])
+            self.masks.append(frame["object_mask"])
+
+    def get_color(self, id):
+        # idx = self.id_strs.index(id)
+        return self.colors[id]
+
+    def get_depth(self, id):
+        # idx = self.id_strs.index(id)
+        return self.depths[id]
+
+    def get_mask(self, id):
+        # idx = self.id_strs.index(id)
+        return self.masks[id]
+
+
 if __name__ == "__main__":
     DATASET_PATH = "/home/ngoncharov/cvpr2026/ycbv-eoat-lf/dataset"
     SEQUENCE_NAME = "bleach_hard_00_03_chaitanya"
     dataset = YCBV_LF(DATASET_PATH, SEQUENCE_NAME)
-    print(dataset[1])
+    reader = LFReader(dataset)
