@@ -183,7 +183,7 @@ if __name__ == "__main__":
     mesh_name = "021_bleach_cleanser"
     mesh_path = f"{dataset_path}/models/{mesh_name}"
     mesh_file_path = f"{mesh_path}/textured.obj"
-    out_folder = sequence_name
+    out_folder = f"output/{sequence_name}"
     mesh_scale = 1
 
     dataset = YCBV_LF(dataset_path, sequence_name)

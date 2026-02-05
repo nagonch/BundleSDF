@@ -106,7 +106,9 @@ class YCBV_LF:
         object_mask = np.array(
             Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png")
         ).astype(np.uint8)
-        depth_image = np.array(Image.open(depth_path))
+        depth_image = np.array(Image.open(depth_path), dtype=np.uint16)
+        # depth_image = depth_image.astype(np.float32) / 1000.0
+        # depth_image[depth_image == 0] = np.inf
         object_pose = np.loadtxt(object_pose_path)
         return {
             "rgb_image": rgb_image,
