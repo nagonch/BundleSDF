@@ -105,6 +105,8 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
     for i in range(len(dataset)):
         image_center = dataset[i]["rgb_image"]
         depth_center = dataset[i]["depth_image"]
+        # print(depth_center.max(), depth_center.min(), depth_center.mean())
+        # raise
         mask_center = dataset[i]["object_mask"]
         object_to_cam = dataset[i]["object_pose"]
         cam_to_world = dataset.camera_poses
@@ -112,13 +114,11 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
         pose_in_model = np.eye(4)
         id_str = f"{str(i).zfill(4)}"
         tracker.run(
-            cv2.cvtColor(
-                image_center.cpu().numpy().astype(np.uint8), cv2.COLOR_RGB2BGR
-            ),
-            depth_center.cpu().numpy(),
+            image_center,
+            depth_center,
             K,
             id_str,
-            mask=mask_center.cpu().numpy().astype(np.uint8),
+            mask=mask_center,
             occ_mask=None,
             pose_in_model=pose_in_model,
         )
@@ -192,10 +192,10 @@ if __name__ == "__main__":
     i_start = 0
     print("getting gt")
     for i in range(i_start, i_start + len(dataset)):
-        image_center = dataset[i]["rgb_image"].cpu().numpy().astype(np.uint8)
-        depth_center = dataset[i]["depth_image"].cpu().numpy()
-        mask_center = dataset[i]["object_mask"].cpu().numpy()
-        object_to_cam = dataset[i]["object_pose"].cpu().numpy()
+        image_center = dataset[i]["rgb_image"]
+        depth_center = dataset[i]["depth_image"]
+        mask_center = dataset[i]["object_mask"]
+        object_to_cam = dataset[i]["object_pose"]
         cam_to_world = dataset.camera_poses
         images.append(image_center)
         gt_poses.append(object_to_cam)

@@ -65,7 +65,9 @@ class YCBV_LF:
             .float()
             .reshape(*self.n_views, 4, 4)
         )
-        self.camera_poses = self.camera_poses.reshape(-1, 4, 4)[self.n_cameras // 2]
+        self.camera_poses = (
+            self.camera_poses.reshape(-1, 4, 4)[self.n_cameras // 2].cpu().numpy()
+        )
         self.camera_matrix = (
             torch.tensor(
                 np.loadtxt(os.path.join(self.sequence_path, "camera_matrix.txt"))
@@ -98,20 +100,14 @@ class YCBV_LF:
         depth_path = self.depth_paths[idx]
         object_pose_path = self.object_poses_paths[idx]
         frame_id = int(lf_path[-4:])
-        rgb_image = torch.tensor(
-            np.array(Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png"))
-        ).cuda()
-        object_mask = (
-            torch.tensor(
-                np.array(Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png"))
-            )
-            .cuda()
-            .bool()
-        )
-        depth_image = (
-            torch.tensor(np.array(Image.open(depth_path))).cuda().float() / 1000.0
-        )
-        object_pose = torch.tensor(np.loadtxt(object_pose_path)).cuda().float()
+        rgb_image = np.array(
+            Image.open(f"{lf_path}/{self.n_cameras//2:04d}.png")
+        ).astype(np.uint8)
+        object_mask = np.array(
+            Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png")
+        ).astype(np.uint8)
+        depth_image = np.array(Image.open(depth_path))
+        object_pose = np.loadtxt(object_pose_path)
         return {
             "rgb_image": rgb_image,
             "object_mask": object_mask,
