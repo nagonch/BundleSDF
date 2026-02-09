@@ -40,11 +40,13 @@ def project_frame_to_image(object_to_cam, camera_matrix, image):
 
 
 def visualize_tracking(dataset, object_poses, camera_matrix, save_folder):
-    rgb_paths = dataset.rgb_paths
+    lf_paths = dataset.lf_paths
     os.makedirs(save_folder, exist_ok=True)
     camera_matrix = camera_matrix.cpu().numpy().astype(np.float64)
-    for i, (frame, pose) in enumerate(zip(rgb_paths, object_poses)):
-        mid_frame = np.array(Image.open(frame).convert("RGB"))
+    for i, (frame, pose) in enumerate(zip(lf_paths, object_poses)):
+        mid_frame = np.array(
+            Image.open(f"{frame}/{dataset.n_cameras//2:04d}.png").convert("RGB")
+        )
         img_vis = project_frame_to_image(pose, camera_matrix, mid_frame)
         Image.fromarray(img_vis).save(f"{save_folder}/{str(i).zfill(4)}.png")
 
@@ -102,7 +104,7 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
         use_gui=use_gui,
     )
     dataset = YCBV_LF(video_dir, sequence_name)
-    for i in range(len(dataset)):
+    for i in range(3):
         image_center = dataset[i]["rgb_image"]
         depth_center = dataset[i]["depth_image"]
         # print(depth_center.max(), depth_center.min(), depth_center.mean())
