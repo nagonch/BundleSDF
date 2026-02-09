@@ -5,7 +5,7 @@
 # and any modifications thereto.  Any use, reproduction, disclosure or
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
-
+# fmt: off
 
 import pickle,glob,cv2,imageio,os,sys,pdb,re,json,trimesh,copy,pdb,logging,multiprocessing,subprocess,joblib
 import numpy as np
