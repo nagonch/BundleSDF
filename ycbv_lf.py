@@ -3,6 +3,8 @@ import os
 import json
 import numpy as np
 from PIL import Image
+import trimesh
+import copy
 
 sequence_names = [
     "bleach_hard_00_03_chaitanya",
@@ -13,25 +15,25 @@ sequence_names = [
     "mustard0",
     "sugar_box_yalehand0",
     "sugar_box1",
-    "tomato_soup_can_yalehand",
+    "tomato_soup_can_yalehand0",
 ]
 model_names = [
     "021_bleach_cleanser",
     "021_bleach_cleanser",
-    "024_cracker_box",
-    "024_cracker_box",
-    "037_mustard_bottle",
-    "037_mustard_bottle",
-    "035_sugar_box",
-    "035_sugar_box",
-    "048_tomato_soup_can",
+    "003_cracker_box",
+    "003_cracker_box",
+    "006_mustard_bottle",
+    "006_mustard_bottle",
+    "004_sugar_box",
+    "004_sugar_box",
+    "005_tomato_soup_can",
 ]
 
 sequence_to_model = {seq: model for seq, model in zip(sequence_names, model_names)}
 
 
 class YCBV_LF:
-    def __init__(self, dataset_path, sequence_name):
+    def __init__(self, dataset_path, sequence_name, reference_mesh_path=None):
         assert os.path.exists(
             dataset_path
         ), f"Dataset path {dataset_path} does not exist."
@@ -45,6 +47,16 @@ class YCBV_LF:
         assert os.path.exists(
             os.path.join(dataset_path, "models", self.model_name)
         ), f"Model {self.model_name} does not exist in dataset path {dataset_path}"
+
+        self.gt_mesh = trimesh.load(
+            f"{dataset_path}/models/{self.model_name}/textured.obj"
+        )
+        if reference_mesh_path is not None:
+            self.mesh = trimesh.load(
+                f"{reference_mesh_path}/{self.model_name[4:]}/model.obj"
+            )
+        else:
+            self.mesh = copy.deepcopy(self.gt_mesh)
 
         self.camera_poses_paths = [
             os.path.join(self.sequence_path, "camera_poses", item)
@@ -107,14 +119,12 @@ class YCBV_LF:
             Image.open(f"{lf_path}/masks/{self.n_cameras//2:04d}.png")
         ).astype(np.uint8)
         depth_image = np.array(Image.open(depth_path), dtype=np.uint16)
-        # depth_image = depth_image.astype(np.float32) / 1000.0
-        # depth_image[depth_image == 0] = np.inf
         object_pose = np.loadtxt(object_pose_path)
         return {
             "rgb_image": rgb_image,
             "object_mask": object_mask,
             "depth_image": depth_image,
-            "object_pose": object_pose,
+            "object_pose": object_pose.astype(np.float32),
             "frame_id": frame_id,
         }
 
