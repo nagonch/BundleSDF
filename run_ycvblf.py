@@ -104,7 +104,7 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
     dataset = YCBV_LF(video_dir, sequence_name)
     for i in range(len(dataset)):
         image_center = dataset[i]["rgb_image"]
-        depth_center = dataset[i]["depth_image"].astype(np.float32) / 1000.0
+        depth_center = dataset[i]["depth_image"]
         # print(depth_center.max(), depth_center.min(), depth_center.mean())
         # raise
         mask_center = dataset[i]["object_mask"]
@@ -218,7 +218,13 @@ if __name__ == "__main__":
     )  # only evaluate tracking, without pose estiamtion
     est_poses = [p @ est_to_gt for p in est_poses]
     est_poses = np.stack(est_poses, axis=0)
-    gt_poses, est_poses = torch.tensor(gt_poses), torch.tensor(est_poses)
+    gt_poses, est_poses = (
+        torch.tensor(gt_poses).float(),
+        torch.tensor(est_poses).float(),
+    )
+
+    torch.save(gt_poses, f"{out_folder}/gt_poses.pt")
+    torch.save(est_poses, f"{out_folder}/est_poses.pt")
 
     pose_errors = compute_pose_errors(gt_poses, est_poses)
     adds_vals, add_vals, adds_auc, add_auc = get_metrics(
