@@ -39,13 +39,13 @@ def project_frame_to_image(object_to_cam, camera_matrix, image):
     return img_vis
 
 
-def visualize_tracking(rgbs, object_poses, camera_matrix, save_folder):
+def visualize_tracking(dataset, object_poses, camera_matrix, save_folder):
+    rgb_paths = dataset.rgb_paths
     os.makedirs(save_folder, exist_ok=True)
-    camera_matrix = camera_matrix.cpu().numpy()
-    for i, (rgb, pose) in enumerate(zip(rgbs, object_poses)):
-        pose = pose.cpu().numpy()
-        rgb = rgb.cpu().numpy()
-        img_vis = project_frame_to_image(pose, camera_matrix, rgb)
+    camera_matrix = camera_matrix.cpu().numpy().astype(np.float64)
+    for i, (frame, pose) in enumerate(zip(rgb_paths, object_poses)):
+        mid_frame = np.array(Image.open(frame).convert("RGB"))
+        img_vis = project_frame_to_image(pose, camera_matrix, mid_frame)
         Image.fromarray(img_vis).save(f"{save_folder}/{str(i).zfill(4)}.png")
 
 
@@ -223,6 +223,9 @@ if __name__ == "__main__":
         torch.tensor(est_poses).float(),
     )
 
+    gt_poses = gt_poses[:3]
+    est_poses = est_poses[:3]
+
     torch.save(gt_poses, f"{out_folder}/gt_poses.pt")
     torch.save(est_poses, f"{out_folder}/est_poses.pt")
 
@@ -232,10 +235,16 @@ if __name__ == "__main__":
     )
     pose_errors.update({"adds_auc": float(adds_auc), "add_auc": float(add_auc)})
     visualize_tracking(
-        torch.tensor(images),
-        torch.tensor(est_poses),
+        dataset,
+        gt_poses.cpu().numpy(),
         torch.tensor(dataset.camera_matrix),
-        f"{out_folder}/frame_vis_car",
+        f"{out_folder}/gt",
     )
-    with open(f"{out_folder}/metrics_car.yaml", "w") as file:
+    visualize_tracking(
+        dataset,
+        est_poses.cpu().numpy(),
+        torch.tensor(dataset.camera_matrix),
+        f"{out_folder}/est",
+    )
+    with open(f"{out_folder}/metrics.yaml", "w") as file:
         yaml.dump(pose_errors, file)
