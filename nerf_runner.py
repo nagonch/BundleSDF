@@ -6,7 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
-
+# fmt:off
 import os, sys,copy,cv2,itertools,uuid,joblib,uuid
 import shutil
 from datetime import datetime
@@ -1486,7 +1486,6 @@ class NerfRunner:
     tex_image = torch.zeros((tex_res,tex_res,3)).cuda().float()
     weight_tex_image = torch.zeros(tex_image.shape[:-1]).cuda().float()
     mesh.merge_vertices()
-    mesh.remove_duplicate_faces()
     mesh = mesh.unwrap()
     H,W = tex_image.shape[:2]
     uvs_tex = (mesh.visual.uv*np.array([W-1,H-1]).reshape(1,2))    #(n_V,2)
@@ -1544,4 +1543,3 @@ class NerfRunner:
     tex_image = tex_image[::-1].copy()
     mesh.visual = trimesh.visual.texture.TextureVisuals(uv=mesh.visual.uv,image=Image.fromarray(tex_image))
     return mesh
-
