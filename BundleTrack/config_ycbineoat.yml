@@ -1,7 +1,7 @@
-data_dir: /home/bowen/debug/ycbineoat
+data_dir: /home/ngoncharov/cvpr2026/datasets/ycb_in_eoat
 model_name: textured_simple
 model_dir: ""
-debug_dir: /home/bowen/debug/BundleTrack/
+debug_dir: /home/ngoncharov/cvpr2026/BundleSDF/debug/BundleTrack/
 init_pose_dir: ""
 SPDLOG: 2
 port: '5555'
@@ -109,5 +109,3 @@ shape:
   zrange: [-0.2,0.2]
   max_weight: 100
   truncate_dist: 0.005
-
-

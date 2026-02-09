@@ -104,7 +104,7 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
     dataset = YCBV_LF(video_dir, sequence_name)
     for i in range(len(dataset)):
         image_center = dataset[i]["rgb_image"]
-        depth_center = dataset[i]["depth_image"]
+        depth_center = dataset[i]["depth_image"].astype(np.float32) / 1000.0
         # print(depth_center.max(), depth_center.min(), depth_center.mean())
         # raise
         mask_center = dataset[i]["object_mask"]
@@ -122,6 +122,7 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
             occ_mask=None,
             pose_in_model=pose_in_model,
         )
+        print(i, "done")
     reader = LFReader(dataset)
     tracker.on_finish()
 
