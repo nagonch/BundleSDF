@@ -138,7 +138,7 @@ class YCBV_EOAT:
 class YCBVReader:
     def __init__(self, dataset):
         self.dataset = dataset
-        self.K = torch.clone(self.dataset.camera_matrix)
+        self.K = torch.clone(self.dataset.camera_matrix).cpu().numpy()
         self.id_strs = [str(i).zfill(4) for i in range(len(dataset))]
         self.colors = []
         self.depths = []
