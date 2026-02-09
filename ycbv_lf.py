@@ -123,7 +123,7 @@ class YCBV_LF:
         return {
             "rgb_image": rgb_image,
             "object_mask": object_mask,
-            "depth_image": depth_image,
+            "depth_image": depth_image.astype(np.float32) / 1000.0,
             "object_pose": object_pose.astype(np.float32),
             "frame_id": frame_id,
         }
@@ -132,7 +132,7 @@ class YCBV_LF:
 class LFReader:
     def __init__(self, dataset):
         self.dataset = dataset
-        self.K = torch.clone(self.dataset.camera_matrix)
+        self.K = torch.clone(self.dataset.camera_matrix).cpu().numpy()
         self.id_strs = [str(i).zfill(4) for i in range(len(dataset))]
         self.colors = []
         self.depths = []
