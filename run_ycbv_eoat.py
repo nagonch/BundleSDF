@@ -102,7 +102,7 @@ def run_ours(video_dir, out_folder, sequence_name, use_gui=False, mesh_scale=1 /
         use_gui=use_gui,
     )
     dataset = YCBV_EOAT(video_dir, sequence_name)
-    for i in range(3):
+    for i in range(len(dataset)):
         image_center = dataset[i]["rgb_image"]
         depth_center = dataset[i]["depth_image"]
         # print(depth_center.max(), depth_center.min(), depth_center.mean())
@@ -180,71 +180,99 @@ def run_one_video_global_nerf(
 
 if __name__ == "__main__":
     dataset_path = "/home/ngoncharov/cvpr2026/datasets/ycb_in_eoat/"
-    sequence_name = "bleach_hard_00_03_chaitanya"
-    mesh_name = "021_bleach_cleanser"
-    mesh_path = f"{dataset_path}/models/{mesh_name}"
-    mesh_file_path = f"{mesh_path}/textured.obj"
-    out_folder = f"output_eoat/{sequence_name}"
-    mesh_scale = 1
 
-    dataset = YCBV_EOAT(dataset_path, sequence_name)
-    images = []
-    gt_poses = []
-    i_start = 0
-    print("getting gt")
-    for i in range(i_start, i_start + len(dataset)):
-        image_center = dataset[i]["rgb_image"]
-        depth_center = dataset[i]["depth_image"]
-        mask_center = dataset[i]["object_mask"]
-        object_to_cam = dataset[i]["object_pose"]
-        cam_to_world = dataset.camera_poses
-        images.append(image_center)
-        gt_poses.append(object_to_cam)
-    print("done")
-    images = np.stack(images, axis=0)
-    gt_poses = np.stack(gt_poses, axis=0)
-    run_ours(dataset_path, out_folder, sequence_name, mesh_scale=mesh_scale)
-    est_poses = []
-    est_poses_path = f"{out_folder}/ob_in_cam"
-    for file in list(sorted(os.listdir(est_poses_path))):
-        file_path = f"{est_poses_path}/{file}"
-        pose = np.loadtxt(file_path)
-        est_poses.append(pose)
-    est_poses = np.stack(est_poses, axis=0)
-    pose_est_0 = est_poses[0]
-    pose_gt_0 = gt_poses[0]
-    est_to_gt = (
-        np.linalg.inv(pose_est_0) @ pose_gt_0
-    )  # only evaluate tracking, without pose estiamtion
-    est_poses = [p @ est_to_gt for p in est_poses]
-    est_poses = np.stack(est_poses, axis=0)
-    gt_poses, est_poses = (
-        torch.tensor(gt_poses).float(),
-        torch.tensor(est_poses).float(),
-    )
+    sequence_names = [
+        "bleach_hard_00_03_chaitanya",
+        "bleach0",
+        "cracker_box_reorient",
+        "cracker_box_yalehand0",
+        "mustard_easy_00_02",
+        "mustard0",
+        "sugar_box_yalehand0",
+        "sugar_box1",
+        "tomato_soup_can_yalehand0",
+    ]
+    model_names = [
+        "021_bleach_cleanser",
+        "021_bleach_cleanser",
+        "003_cracker_box",
+        "003_cracker_box",
+        "006_mustard_bottle",
+        "006_mustard_bottle",
+        "004_sugar_box",
+        "004_sugar_box",
+        "005_tomato_soup_can",
+    ]
+    for sequence_name, mesh_name in zip(sequence_names, model_names):
+        mesh_path = f"{dataset_path}/models/{mesh_name}"
+        mesh_file_path = f"{mesh_path}/textured.obj"
+        out_folder = f"output_eoat/{sequence_name}"
+        mesh_scale = 1
 
-    gt_poses = gt_poses[:3]
-    est_poses = est_poses[:3]
+        print("RUNNING ON SEQUENCE ", sequence_name)
+        try:
+            os.makedirs(out_folder)
+        except FileExistsError:
+            print(f"Skipping {sequence_name}, already exists.")
+            continue
+        try:
+            dataset = YCBV_EOAT(dataset_path, sequence_name)
+            images = []
+            gt_poses = []
+            i_start = 0
+            print("getting gt")
+            for i in range(i_start, i_start + len(dataset)):
+                image_center = dataset[i]["rgb_image"]
+                depth_center = dataset[i]["depth_image"]
+                mask_center = dataset[i]["object_mask"]
+                object_to_cam = dataset[i]["object_pose"]
+                cam_to_world = dataset.camera_poses
+                images.append(image_center)
+                gt_poses.append(object_to_cam)
+            print("done")
+            images = np.stack(images, axis=0)
+            gt_poses = np.stack(gt_poses, axis=0)
+            run_ours(dataset_path, out_folder, sequence_name, mesh_scale=mesh_scale)
+            est_poses = []
+            est_poses_path = f"{out_folder}/ob_in_cam"
+            for file in list(sorted(os.listdir(est_poses_path))):
+                file_path = f"{est_poses_path}/{file}"
+                pose = np.loadtxt(file_path)
+                est_poses.append(pose)
+            est_poses = np.stack(est_poses, axis=0)
+            pose_est_0 = est_poses[0]
+            pose_gt_0 = gt_poses[0]
+            est_to_gt = (
+                np.linalg.inv(pose_est_0) @ pose_gt_0
+            )  # only evaluate tracking, without pose estiamtion
+            est_poses = [p @ est_to_gt for p in est_poses]
+            est_poses = np.stack(est_poses, axis=0)
+            gt_poses, est_poses = (
+                torch.tensor(gt_poses).float(),
+                torch.tensor(est_poses).float(),
+            )
 
-    torch.save(gt_poses, f"{out_folder}/gt_poses.pt")
-    torch.save(est_poses, f"{out_folder}/est_poses.pt")
+            torch.save(gt_poses, f"{out_folder}/gt_poses.pt")
+            torch.save(est_poses, f"{out_folder}/est_poses.pt")
 
-    pose_errors = compute_pose_errors(gt_poses, est_poses)
-    adds_vals, add_vals, adds_auc, add_auc = get_metrics(
-        gt_poses, mesh_file_path, est_poses
-    )
-    pose_errors.update({"adds_auc": float(adds_auc), "add_auc": float(add_auc)})
-    visualize_tracking(
-        dataset,
-        gt_poses.cpu().numpy(),
-        torch.tensor(dataset.camera_matrix),
-        f"{out_folder}/gt",
-    )
-    visualize_tracking(
-        dataset,
-        est_poses.cpu().numpy(),
-        torch.tensor(dataset.camera_matrix),
-        f"{out_folder}/est",
-    )
-    with open(f"{out_folder}/metrics.yaml", "w") as file:
-        yaml.dump(pose_errors, file)
+            pose_errors = compute_pose_errors(gt_poses, est_poses)
+            adds_vals, add_vals, adds_auc, add_auc = get_metrics(
+                gt_poses, mesh_file_path, est_poses
+            )
+            pose_errors.update({"adds_auc": float(adds_auc), "add_auc": float(add_auc)})
+            visualize_tracking(
+                dataset,
+                gt_poses.cpu().numpy(),
+                torch.tensor(dataset.camera_matrix),
+                f"{out_folder}/gt",
+            )
+            visualize_tracking(
+                dataset,
+                est_poses.cpu().numpy(),
+                torch.tensor(dataset.camera_matrix),
+                f"{out_folder}/est",
+            )
+            with open(f"{out_folder}/metrics.yaml", "w") as file:
+                yaml.dump(pose_errors, file)
+        except Exception as e:
+            print(f"Error processing {sequence_name}: {e}")
