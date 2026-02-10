@@ -1,7 +1,7 @@
-data_dir: /mnt/9a72c439-d0a7-45e8-8d20-d7a235d02763/DATASET/HO3D_v3/evaluation/SM1
+data_dir: /home/ngoncharov/cvpr2026/datasets/ycb_in_eoat
 model_name: textured_simple
 model_dir: ""
-debug_dir: /home/bowen/debug/BundleTrack/
+debug_dir: /home/ngoncharov/cvpr2026/BundleSDF/debug/BundleTrack/
 init_pose_dir: ""
 SPDLOG: 2
 port: '5555'
@@ -86,13 +86,13 @@ feature_corres:
 ransac:
   max_iter: 2000
   num_sample: 3
-  inlier_dist: 0.005
-  inlier_normal_angle: 30
+  inlier_dist: 0.015
+  inlier_normal_angle: 45
   desired_succ_rate: 0.99
-  max_trans_neighbor: 0.02   #ransac model estimated pose shouldnt be too far
+  max_trans_neighbor: 0.03   #ransac model estimated pose shouldnt be too far
   max_rot_deg_neighbor: 30
-  max_trans_no_neighbor: 999
-  max_rot_no_neighbor: 180
+  max_trans_no_neighbor: 0.02
+  max_rot_no_neighbor: 10
   epipolar_thres: 1
   min_match_after_ransac: 5
 

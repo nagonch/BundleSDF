@@ -47,14 +47,11 @@ class YCBV_LF:
         assert os.path.exists(
             os.path.join(dataset_path, "models", self.model_name)
         ), f"Model {self.model_name} does not exist in dataset path {dataset_path}"
-
-        self.gt_mesh = trimesh.load(
-            f"{dataset_path}/models/{self.model_name}/textured.obj"
-        )
+        self.gt_mesh_path = f"{dataset_path}/models/{self.model_name}/textured.obj"
+        self.gt_mesh = trimesh.load(self.gt_mesh_path)
         if reference_mesh_path is not None:
-            self.mesh = trimesh.load(
-                f"{reference_mesh_path}/{self.model_name[4:]}/model.obj"
-            )
+            self.mesh_path = f"{reference_mesh_path}/{self.model_name[4:]}/model.obj"
+            self.mesh = trimesh.load(self.mesh_path)
         else:
             self.mesh = copy.deepcopy(self.gt_mesh)
 

@@ -15,7 +15,7 @@ segmentation:
   bg_dir: /home/bowen/debug/2022-09-07-16-49-22/bg.ply
 
 depth_processing:
-  zfar: 2.0
+  zfar: 10.0
   erode:
     radius: 1
     diff: 0.001
