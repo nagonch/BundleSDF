@@ -15,6 +15,16 @@ from BundleTrack.scripts.data_reader import *
 import pandas as pd
 
 
+def safe_voxel_down(pcd, voxel_size):
+  """voxel_down_sample raises if voxel_size < point spacing; double until it works."""
+  for _ in range(6):
+    try:
+      return pcd.voxel_down_sample(voxel_size)
+    except RuntimeError:
+      voxel_size *= 2
+  return pcd
+
+
 def find_biggest_cluster(pts, eps=0.06, min_samples=1):
   dbscan = DBSCAN(eps=eps,min_samples=min_samples,n_jobs=-1)
   dbscan.fit(pts)
@@ -56,8 +66,9 @@ def compute_scene_bounds_worker(color_file,K,glcam_in_world,use_mask,rgb=None,de
     return None
   colors = rgb[valid].reshape(-1,3)
   pcd = toOpen3dCloud(pts,colors)
-  pcd = pcd.voxel_down_sample(0.01)
-  pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=30,std_ratio=2.0)
+  pcd = safe_voxel_down(pcd, 0.01)
+  if len(pcd.points) >= 30:
+    pcd, ind = pcd.remove_statistical_outlier(nb_neighbors=30,std_ratio=2.0)
   cam_in_world = glcam_in_world@glcam_in_cvcam
   pcd.transform(cam_in_world)
 
@@ -90,7 +101,10 @@ def compute_scene_bounds(color_files,glcam_in_worlds,K,use_mask=True,base_dir=No
       pcd_all = toOpen3dCloud(r[0],r[1])
     else:
       pcd_all += toOpen3dCloud(r[0],r[1])
-  pcd = pcd_all.voxel_down_sample(eps/5)
+  if pcd_all is None or len(pcd_all.points) == 0:
+    logging.warning("compute_scene_bounds: all frames yielded empty point clouds")
+    return None
+  pcd = safe_voxel_down(pcd_all, max(eps/5, 0.001))
 
   logging.info(f"merge pcd")
 

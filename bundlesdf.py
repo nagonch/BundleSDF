@@ -234,7 +234,8 @@ def run_nerf(p_dict, kf_to_nerf_list, lock, cfg_nerf, translation, sc_factor, st
   with lock:
     SPDLOG = p_dict['SPDLOG']
 
-  while 1:
+  try:
+   while 1:
     with lock:
       join = p_dict['join']
 
@@ -297,7 +298,14 @@ def run_nerf(p_dict, kf_to_nerf_list, lock, cfg_nerf, translation, sc_factor, st
     if cfg_nerf['continual']:
       if cnt_nerf==0:
         if translation is None:
-          sc_factor,translation,pcd_real_scale, pcd_normalized = compute_scene_bounds(None,glcam_in_obs,K,use_mask=True,base_dir=cfg_nerf['save_dir'],rgbs=np.array(rgbs_all),depths=np.array(depths_all),masks=np.array(masks_all), eps=cfg_nerf['dbscan_eps'], min_samples=cfg_nerf['dbscan_eps_min_samples'])
+          bounds = compute_scene_bounds(None,glcam_in_obs,K,use_mask=True,base_dir=cfg_nerf['save_dir'],rgbs=np.array(rgbs_all),depths=np.array(depths_all),masks=np.array(masks_all), eps=cfg_nerf['dbscan_eps'], min_samples=cfg_nerf['dbscan_eps_min_samples'])
+          if bounds is None:
+            logging.warning("run_nerf: scene bounds empty, skipping NeRF iteration")
+            cnt_nerf -= 1
+            with lock:
+              p_dict['running'] = False
+            continue
+          sc_factor,translation,pcd_real_scale, pcd_normalized = bounds
           sc_factor *= 0.7      # Ensure whole object within bound
           cfg_nerf['sc_factor'] = float(sc_factor)
           cfg_nerf['translation'] = translation
@@ -312,9 +320,11 @@ def run_nerf(p_dict, kf_to_nerf_list, lock, cfg_nerf, translation, sc_factor, st
       else:
         pcd_all = prev_pcd_real_scale
         for i in range(len(rgbs)):
-          pts, colors = compute_scene_bounds_worker(None,K,glcam_in_obs[len(glcam_in_obs)-len(rgbs)+i],use_mask=True,rgb=rgbs[i],depth=depths[i],mask=masks[i])
-          pcd_all += toOpen3dCloud(pts, colors)
-        pcd_all = pcd_all.voxel_down_sample(vox_res)
+          result = compute_scene_bounds_worker(None,K,glcam_in_obs[len(glcam_in_obs)-len(rgbs)+i],use_mask=True,rgb=rgbs[i],depth=depths[i],mask=masks[i])
+          if result is not None:
+            pts, colors = result
+            pcd_all += toOpen3dCloud(pts, colors)
+        pcd_all = safe_voxel_down(pcd_all, vox_res)
         _,keep_mask = find_biggest_cluster(np.asarray(pcd_all.points), eps=cfg_nerf['dbscan_eps'], min_samples=cfg_nerf['dbscan_eps_min_samples'])
         keep_ids = np.arange(len(np.asarray(pcd_all.points)))[keep_mask]
         pcd_all = pcd_all.select_by_index(keep_ids)
@@ -393,7 +403,7 @@ def run_nerf(p_dict, kf_to_nerf_list, lock, cfg_nerf, translation, sc_factor, st
     logging.info(f"nerf done at frame {frame_id}")
 
     if cfg_nerf['continual']:
-      prev_pcd_real_scale = pcd_all.voxel_down_sample(vox_res)
+      prev_pcd_real_scale = safe_voxel_down(pcd_all, vox_res)
 
     ####### Log
     if SPDLOG>=2:
@@ -409,7 +419,11 @@ def run_nerf(p_dict, kf_to_nerf_list, lock, cfg_nerf, translation, sc_factor, st
       mesh.export(f"{cfg_nerf['save_dir']}/mesh_real_world.obj")
       os.system(f"rm -rf {cfg_nerf['save_dir']}/step_*_mesh_real_world.obj {cfg_nerf['save_dir']}/*frame*ray*.ply && mv {cfg_nerf['save_dir']}/*  {out_dir}/")
 
-
+  except Exception as e:
+    logging.error(f"run_nerf subprocess error: {e}", exc_info=True)
+  finally:
+    with lock:
+      p_dict['running'] = False
 
 
 class BundleSdf:
@@ -730,6 +744,9 @@ class BundleSdf:
 
       ############# Wait for sync
       while 1:
+        if not self.p_nerf.is_alive():
+          logging.warning("NeRF subprocess died, skipping sync wait")
+          break
         with self.lock:
           running = self.p_dict['running']
           nerf_num_frames = self.p_dict['nerf_num_frames']
