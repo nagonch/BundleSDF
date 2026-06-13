@@ -521,7 +521,9 @@ class BundleSdf:
       tfB = np.array(tfs[i_pair*2+1])
       cur_corres[:,:2] = transform_pts(cur_corres[:,:2], np.linalg.inv(tfA))
       cur_corres[:,2:4] = transform_pts(cur_corres[:,2:4], np.linalg.inv(tfB))
+      logging.info(f"looking for matches")
       self.bundler._fm._raw_matches[query_pairs[i_pair]] = cur_corres.round().astype(np.uint16)
+      logging.info(f"found matches")
 
     min_match_with_ref = self.cfg_track["feature_corres"]["min_match_with_ref"]
 
@@ -530,14 +532,18 @@ class BundleSdf:
       self.bundler._newframe._status = my_cpp.Frame.FAIL
       logging.info(f'frame {self.bundler._newframe._id_str} mark FAIL, due to no matching')
       return
-
+    
+    logging.info(f"enough raw matches")
     self.bundler._fm.rawMatchesToCorres(query_pairs)
 
+    logging.info(f"foundt corres")
     for pair in query_pairs:
       self.bundler._fm.vizCorresBetween(pair[0], pair[1], 'before_ransac')
 
+    logging.info(f"vis corres")
     self.bundler._fm.runRansacMultiPairGPU(query_pairs)
 
+    logging.info(f"ran ransac gpu")
     for pair in query_pairs:
       self.bundler._fm.vizCorresBetween(pair[0], pair[1], 'after_ransac')
 

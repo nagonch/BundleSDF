@@ -144,3 +144,11 @@ run_used.yml
 # output
 # output/
 # output/*
+# output_eoat
+# output_eoat/
+# output_eoat/*
+dataset_reflective_*
+dataset_*
+results_*
+output_*
+output
