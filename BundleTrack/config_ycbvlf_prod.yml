@@ -15,7 +15,6 @@ segmentation:
   tolerance: 0.03
 
 depth_processing:
-  # robot-arm tabletop workspace; objects are 0.5–1.5 m from camera
   zfar: 2.0
   erode:
     radius: 1
@@ -30,7 +29,6 @@ depth_processing:
     std_mul: 3
   edge_normal_thres: 10
   denoise_cloud: False
-  # clip noisy far-range depth while keeping most of the signal
   percentile: 95
 
 visible_angle: 70
@@ -51,11 +49,12 @@ bundle:
   w_sdf: 0
   w_pm: 0
   robust_delta: 0.005
-  min_fm_edges_newframe: 15
+  # lowered to survive fast-motion sequences with sparse features
+  min_fm_edges_newframe: 3
   image_downscale: [4]
-  feature_edge_dist_thres: 0.01
-  feature_edge_normal_thres: 30
-  max_optimized_feature_loss: 0.03
+  feature_edge_dist_thres: 0.02
+  feature_edge_normal_thres: 60
+  max_optimized_feature_loss: 0.1
 
 keyframe:
   min_interval: 1
@@ -74,44 +73,44 @@ sift:
 
 feature_corres:
   mutual: True
-  # map_points lets BundleTrack reuse tracked 3D points across keyframes
   map_points: True
-  # tight neighbor thresholds to reject spurious matches between close frames
-  max_dist_neighbor: 0.02
-  max_normal_neighbor: 30
-  # strict no-neighbor thresholds; large rotations handled by ransac limits
-  max_dist_no_neighbor: 0.01
-  max_normal_no_neighbor: 20
+  # generous neighbor thresholds — we tolerate noisy matches for this baseline
+  max_dist_neighbor: 0.1
+  max_normal_neighbor: 60
+  # unconstrained for non-neighbors so large inter-frame motion still matches
+  max_dist_no_neighbor: 999
+  max_normal_no_neighbor: 180
   suppression_patch_size: 5
   max_view_normal_angle: 180
-  min_match_with_ref: 5
+  # minimum raw matches before giving up on a frame; keep very low
+  min_match_with_ref: 3
   resize: 400
   rematch_after_nerf: True
 
 ransac:
-  max_iter: 2000
+  max_iter: 5000
   num_sample: 3
-  # tighter inlier thresholds for small YCB-scale objects (~0.1–0.3 m)
-  inlier_dist: 0.01
-  inlier_normal_angle: 20
+  # loose inlier thresholds — reflective / fast-moving objects produce noisy 3D
+  inlier_dist: 0.05
+  inlier_normal_angle: 60
   desired_succ_rate: 0.99
-  max_trans_neighbor: 0.02
-  max_rot_deg_neighbor: 30
-  max_trans_no_neighbor: 0.01
-  max_rot_no_neighbor: 10
-  epipolar_thres: 1
-  min_match_after_ransac: 5
+  # wide motion limits so fast sequences are not rejected
+  max_trans_neighbor: 0.5
+  max_rot_deg_neighbor: 90
+  max_trans_no_neighbor: 999
+  max_rot_no_neighbor: 180
+  epipolar_thres: 3
+  min_match_after_ransac: 3
 
 p2p:
   projective: false
-  max_dist: 0.02
-  max_normal_angle: 45
+  max_dist: 0.05
+  max_normal_angle: 60
 
 sdf_edge:
-  max_dist: 0.02
+  max_dist: 0.05
 
 shape:
-  # 5 mm voxel resolution; YCB objects fit within ±0.2 m
   res: 0.005
   xrange: [-0.2,0.2]
   yrange: [-0.2,0.2]

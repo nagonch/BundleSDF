@@ -1,6 +1,6 @@
 from bundlesdf import *
 import copy
-import os, sys, argparse
+import os, sys, argparse, shutil
 import numpy as np
 import yaml as pyyaml
 
@@ -29,6 +29,10 @@ def mesh_path_for(object_name: str, reflectivity: str, depth_mode: str) -> str:
 
 def run_bundlesdf(dataset, out_folder: str):
     set_seed(0)
+    # wipe any partial output from a previous crashed run so stale pose
+    # files in ob_in_cam/ can't contaminate collect_poses
+    if os.path.exists(out_folder):
+        shutil.rmtree(out_folder)
     os.makedirs(out_folder, exist_ok=True)
 
     cfg_bundletrack = pyyaml.load(
@@ -117,11 +121,18 @@ def run_sequences(prefix: str, reflectivity: str, depth_mode: str):
             f"[run]  {prefix}_{reflectivity} / {depth_mode} / {seq_name}  mesh={object_name}"
         )
 
-        dataset = YCBV_LF_Prod(seq_path, mesh_path, depth_mode=depth_mode)
+        try:
+            dataset = YCBV_LF_Prod(seq_path, mesh_path, depth_mode=depth_mode)
+            run_bundlesdf(dataset, seq_out_folder)
+            poses = collect_poses(seq_out_folder)
+        except Exception as e:
+            print(f"[fail] {prefix}_{reflectivity} / {depth_mode} / {seq_name}: {e}")
+            continue
 
-        run_bundlesdf(dataset, seq_out_folder)
+        if not poses:
+            print(f"[warn] no poses collected for {seq_name}, skipping")
+            continue
 
-        poses = collect_poses(seq_out_folder)
         gt_poses = [dataset[i]["object_pose"] for i in range(len(dataset))]
 
         try:
